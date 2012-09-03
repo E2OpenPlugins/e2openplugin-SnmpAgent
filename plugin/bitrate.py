@@ -6,20 +6,21 @@ class Bitrate():
 		self.refresh_func = refresh_func
 		self.finished_func = finished_func
 
+		self.remainingdata = ""
 		self.running = False
 		self.clearValues()
 		self.datalines = []
 		self.container = eConsoleAppContainer()
-		self.container.appClosed.get().append(self.appClosed)
-		self.container.dataAvail.get().append(self.dataAvail)
+		self.container.appClosed.append(self.appClosed)
+		self.container.dataAvail.append(self.dataAvail)
 
 	def start(self):
 		if self.running:
 			return
 		service = self.session.nav.getCurrentService()
 		if service:
-			#stream() doesn't work in HEAD enigma2, default data demux for tuner 0 seems to be 3...
-			demux = 3
+			#stream() doesn't work in HEAD enigma2, default data demux for tuner 0 seems to be 2...
+			demux = 2
 			try:
 				stream = service.stream()
 				if stream:
@@ -52,17 +53,30 @@ class Bitrate():
 
 	def stop(self):
 		self.container.kill()
+		self.remainingdata = ""
 		self.clearValues()
 		self.running = False
 
 	def appClosed(self, retval):
+		self.remainingdata = ""
 		self.clearValues()
 		self.running = False
 		if self.finished_func:
 			self.finished_func(retval)
 
 	def dataAvail(self, str):
+		#prepend any remaining data from the previous call
+		str = self.remainingdata + str
+		#split in lines
 		newlines = str.split('\n')
+		#'str' should end with '\n', so when splitting, the last line should be empty. If this is not the case, we received an incomplete line
+		if len(newlines[-1]):
+			#remember this data for next time
+			self.remainingdata = newlines[-1]
+			newlines = newlines[0:-1]
+		else:
+			self.remainingdata = ""
+
 		for line in newlines:
 			if len(line):
 				self.datalines.append(line)

@@ -1,7 +1,27 @@
-import time
+import time, platform
 from enigma import eTimer, iFrontendInformation, iPlayableService
 from Plugins.Plugin import PluginDescriptor
-from Components.config import config, ConfigText, ConfigYesNo, ConfigSubsection
+
+from Screens.MessageBox import MessageBox
+from Screens.Screen import Screen
+
+
+from Components.ActionMap import ActionMap
+from Components.ConfigList import ConfigList, ConfigListScreen
+from Components.Sources.StaticText import StaticText
+
+from Components.config import config
+from Components.config import ConfigSubsection
+from Components.config import ConfigSelection
+from Components.config import getConfigListEntry
+from Components.config import ConfigInteger
+from Components.config import ConfigSubList
+from Components.config import ConfigSubDict
+from Components.config import ConfigText
+from Components.config import configfile
+from Components.config import ConfigYesNo
+from Components.config import ConfigPassword
+
 from Components.Network import iNetwork
 
 from twisted.internet import error as twisted_error
@@ -16,16 +36,135 @@ from enigma import eDVBResourceManager, eDVBFrontendParametersSatellite, eDVBFro
 from bitrate import Bitrate
 from emm import Emm
 
+from cpu import GetCPUStatForType, CPUStatTypes
+from loadavr import GetCPULoadForType, CPULoadTypes
+from memory import GetMemoryForType, MemoryTypes
+from disk import GetDiskInfo, DiskInfoTypes
+from network import GetNetworkInfo, NetworkInfoTypes
+
+# for localized messages
+from . import _
+
 config.plugins.SnmpAgent = ConfigSubsection()
-config.plugins.SnmpAgent.managerip = ConfigText(default = '0.0.0.0')
-config.plugins.SnmpAgent.systemname = ConfigText(default = 'dm7025')
-config.plugins.SnmpAgent.systemdescription = ConfigText(default = 'signal quality monitor')
-config.plugins.SnmpAgent.supportaddress = ConfigText(default = 'support@somewhere.tv')
-config.plugins.SnmpAgent.location = ConfigText(default = 'default location')
-config.plugins.SnmpAgent.measurebitrate = ConfigYesNo(default = False)
-config.plugins.SnmpAgent.checkemm = ConfigYesNo(default = False)
+
+config.plugins.SnmpAgent.startuptype = ConfigYesNo(default=True)
+config.plugins.SnmpAgent.managerip = ConfigText(default='0.0.0.0')
+config.plugins.SnmpAgent.systemname = ConfigText(default=platform.node())
+config.plugins.SnmpAgent.systemdescription = ConfigText(default='SNMP Agent for Enigma2')
+config.plugins.SnmpAgent.supportaddress = ConfigText(default='support@somewhere.tv')
+config.plugins.SnmpAgent.location = ConfigText(default='default location')
+config.plugins.SnmpAgent.measurebitrate = ConfigYesNo(default=False)
+config.plugins.SnmpAgent.checkemm = ConfigYesNo(default=False)
+config.plugins.SnmpAgent.save()
 
 config.tv.lastroot = ConfigText()
+
+
+#------------------------------------------------------------------------------------------
+#VERSION
+versionstr = "2.0.4"
+#------------------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------------------
+#GLOBAL
+#------------------------------------------------------------------------------------------
+global_session = None
+global_my_agent = None
+
+#===============================================================================
+# class
+# SNMPAgentMainMenu
+#===============================================================================
+class SNMPAgent_MainMenu(Screen, ConfigListScreen):
+	skin = """<screen name="SNMPAgent_MainMenu" title="SNMP Agent Menu" position="center,center" size="565,370">
+		<ePixmap pixmap="skin_default/buttons/red.png" position="0,0" size="140,40" alphatest="on" />
+		<ePixmap pixmap="skin_default/buttons/green.png" position="140,0" size="140,40" alphatest="on" />
+		<ePixmap pixmap="skin_default/buttons/yellow.png" position="280,0" size="140,40" alphatest="on" />
+		<ePixmap pixmap="skin_default/buttons/blue.png" position="420,0" size="140,40" alphatest="on" />
+		<widget source="key_red" render="Label" position="0,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
+		<widget source="key_green" render="Label" position="140,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+		<widget source="key_yellow" render="Label" position="280,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+		<widget source="key_blue" render="Label" position="420,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+		<widget name="config" position="5,50" size="555,250" scrollbarMode="showOnDemand" />
+		<ePixmap pixmap="skin_default/div-h.png" position="0,301" zPosition="1" size="565,2" />
+	</screen>"""
+
+	def __init__(self, session, args=None):
+		self.skin = SNMPAgent_MainMenu.skin
+		Screen.__init__(self, session)
+
+		ConfigListScreen.__init__(
+			self,
+			[
+				getConfigListEntry(_("Startup type"), config.plugins.SnmpAgent.startuptype, _("Should the SnmpAgent start automatically on startup?")),
+				getConfigListEntry(_("Manager IP"), config.plugins.SnmpAgent.managerip, _("Which IP Address is used for the manager?")),
+				getConfigListEntry(_("System Name"), config.plugins.SnmpAgent.systemname, _("Which name should be used to identify the device?")),
+				getConfigListEntry(_("System Description"), config.plugins.SnmpAgent.systemdescription, _("Description for the device")),
+				getConfigListEntry(_("Support Address"), config.plugins.SnmpAgent.supportaddress, _("Support Email Address")),
+				getConfigListEntry(_("Location"), config.plugins.SnmpAgent.location, _("Description of Location where the device resides")),
+				getConfigListEntry(_("Measure Bitrate"), config.plugins.SnmpAgent.measurebitrate, _("Do bitrates have to be Monitored?")),
+				getConfigListEntry(_("Measure EMM"), config.plugins.SnmpAgent.checkemm, _("Do EMMs have to be Monitored?")),
+			],
+			session=session,
+			on_change=self._changed
+		)
+
+		self._session = session
+		self._hasChanged = False
+
+		# Initialize widgets
+		self["key_red"] = StaticText(_("Cancel"))
+		self["key_green"] = StaticText(_("Save"))
+		self["key_yellow"] = StaticText(_("Start Service"))
+		self["key_blue"] = StaticText(_("Stop Service"))
+
+		# Define Actions
+		self["setupActions"] = ActionMap(["SetupActions", "ColorActions"],
+		{
+			"green": self.keySave,
+			"blue": self.keyStop,
+			"yellow": self.keyStart,
+			"cancel": self.keyCancel,
+		}, -2)
+
+		self.onLayoutFinish.append(self.setCustomTitle)
+
+	def _changed(self):
+		self._hasChanged = True
+
+	def keyStart(self):
+		print "[SnmpAgent] pressed start"
+		print "[SnmpAgent] trying to stop if running"
+		stopSNMPserver(global_session)
+		print "[SnmpAgent] trying to start"
+		startSNMPserver(global_session)
+		self.session.openWithCallback(self.close, MessageBox, _("Service successfully started"), MessageBox.TYPE_INFO, timeout=5)
+
+	def keyStop(self):
+		print "[SnmpAgent] pressed stop"
+		stopSNMPserver(global_session)
+		self.session.openWithCallback(self.close, MessageBox, _("Service successfully stoped"), MessageBox.TYPE_INFO, timeout=5)
+
+	def keySave(self):
+		print "[SnmpAgent] pressed save"
+		self.saveAll()
+		self.close()
+
+	def quitPlugin(self, answer):
+		if answer is True:
+			self.close()
+
+	def restartGUI(self, answer):
+		if answer is True:
+			from Screens.Standby import TryQuitMainloop
+			stopSNMPserver(global_session)
+			self.session.open(TryQuitMainloop, 3)
+		else:
+			self.close()
+
+	def setCustomTitle(self):
+		#TRANSLATORS: SnmpAgent settings window title, the plugin version is printed in {0}
+		self.setTitle( _("Settings for SnmpAgent V{0}").format(versionstr))
 
 class ourOIDStore(bisectoidstore.BisectOIDStore):
 	startTime = time.time()
@@ -33,19 +172,25 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 	oldframes = 0
 	iface = 'eth0'
 
+	ip_adentifindex_ref = {}
+	ip_adentaddr_ref = {}
+
 	SYSUPTIME_OID = '.1.3.6.1.2.1.1.3.0'
 	SYSTEMDESCRIPTION_OID = '.1.3.6.1.2.1.1.1.0'
-	SYSTEMNAME_OID = '.1.3.6.1.2.1.1.6.0'
 	SUPPORTADDRESS_OID = '.1.3.6.1.2.1.1.4.0'
-	LOCATION_OID = '.1.3.6.1.2.1.1.5.0'
+	SYSTEMNAME_OID = '.1.3.6.1.2.1.1.5.0'
+	LOCATION_OID = '.1.3.6.1.2.1.1.6.0'
 	BER_OID = '.1.3.6.1.2.1.1.10000.0'
 	AGC_OID = '.1.3.6.1.2.1.1.10001.0'
 	SNR_OID = '.1.3.6.1.2.1.1.10002.0'
-	HASPICTURE_OID = '.1.3.6.1.2.1.1.10003.0'
+	SNRDB_OID = '.1.3.6.1.2.1.1.10003.0'
+	LOCK_OID = '.1.3.6.1.2.1.1.10004.0'
+	HASPICTURE_OID = '.1.3.6.1.2.1.1.10009.0'
 	CHANNELNAME_OID = '.1.3.6.1.2.1.1.10010.0'
 	SERVICESTRING_OID = '.1.3.6.1.2.1.1.10011.0'
 	FASTSCANSTRING_OID = '.1.3.6.1.2.1.1.10012.0'
 	SERVICEPARAMS_OID = '.1.3.6.1.2.1.1.10013.0'
+	TUNERTYPE_OID = '.1.3.6.1.2.1.1.10014.0'
 	MANAGERIP_OID = '.1.3.6.1.2.1.1.10020.0'
 	ENABLE_BITRATE_OID = '.1.3.6.1.2.1.1.10030.0'
 	VIDEO_BITRATE_OID = '.1.3.6.1.2.1.1.10031.0'
@@ -55,8 +200,48 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 	GATEWAY_OID = '.1.3.6.1.2.1.1.10052.0'
 	ENABLE_EMM_OID = '.1.3.6.1.2.1.1.10060.0'
 	EMM_OID = '.1.3.6.1.2.1.1.10061.0'
+	CPU_USER = '.1.3.6.1.4.1.2021.11.50.0'
+	CPU_NICE = '.1.3.6.1.4.1.2021.11.51.0'
+	CPU_SYSTEM = '.1.3.6.1.4.1.2021.11.52.0'
+	CPU_IDLE = '.1.3.6.1.4.1.2021.11.53.0'
+	CPU_WAIT = '.1.3.6.1.4.1.2021.11.54.0'
+	LOAD_AVR1 = '.1.3.6.1.4.1.2021.10.1.3.1'
+	LOAD_AVR5 = '.1.3.6.1.4.1.2021.10.1.3.2'
+	LOAD_AVR15 = '.1.3.6.1.4.1.2021.10.1.3.3'
+	MEM_TOTAL = '.1.3.6.1.4.1.2021.4.5.0'
+	MEM_TOTAL2 = '.1.3.6.1.2.1.25.2.2.0'
+	MEM_USED = '.1.3.6.1.4.1.2021.4.11.0'
+	MEM_FREE = '.1.3.6.1.4.1.2021.4.6.0'
+	MEM_BUFFER = '.1.3.6.1.4.1.2021.4.14.0'
+	MEM_CACHED = '.1.3.6.1.4.1.2021.4.15.0'
+	MEM_SWAPTOTAL = '.1.3.6.1.4.1.2021.4.3.0'
+	MEM_SWAPFREE = '.1.3.6.1.4.1.2021.4.4.0'
+	DISK_INDEX = '.1.3.6.1.4.1.2021.9.1.1'
+	DISK_PATHNAME = '.1.3.6.1.4.1.2021.9.1.2'
+	DISK_DEVICENAME = '.1.3.6.1.4.1.2021.9.1.3'
+	DISK_AVAIL = '.1.3.6.1.4.1.2021.9.1.7'
+	DISK_USED = '.1.3.6.1.4.1.2021.9.1.8'
+	IF_NUMBER = '.1.3.6.1.2.1.2.1.0'
+	IF_INDEX = '.1.3.6.1.2.1.2.2.1.1'
+	IF_DESC = '.1.3.6.1.2.1.2.2.1.2'
+	IF_TYPE = '.1.3.6.1.2.1.2.2.1.3'
+	IF_MTU = '.1.3.6.1.2.1.2.2.1.4'
+	IF_SPEED = '.1.3.6.1.2.1.2.2.1.5'
+	IF_HWADDR = '.1.3.6.1.2.1.2.2.1.6'
+	IF_STATUS = '.1.3.6.1.2.1.2.2.1.8'
+	IF_INOCTANTS = '.1.3.6.1.2.1.2.2.1.10'
+	IF_INDISCARD = '.1.3.6.1.2.1.2.2.1.13'
+	IF_INERRORS = '.1.3.6.1.2.1.2.2.1.14'
+	IF_OUTOCTANTS = '.1.3.6.1.2.1.2.2.1.16'
+	IF_OUTDISCARD = '.1.3.6.1.2.1.2.2.1.19'
+	IF_OUTERRORS = '.1.3.6.1.2.1.2.2.1.20'
+	IF_IPADENTADDR = '.1.3.6.1.2.1.4.20.1.1'
+	IP_ADENTIFINDEX = '.1.3.6.1.2.1.4.20.1.2'
+	IF_NAME = '.1.3.6.1.2.1.31.1.1.1.1'
+	IF_HSPEED = '.1.3.6.1.2.1.31.1.1.1.15'
+	IF_ALIAS = '.1.3.6.1.2.1.31.1.1.1.18'
 
-	def __init__(self, session, oids = {}):
+	def __init__(self, session, oids={}):
 		self.session = session
 		oids.update({
 			self.SYSTEMDESCRIPTION_OID: self.getValue,
@@ -68,6 +253,8 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			self.BER_OID: self.getValue,
 			self.AGC_OID: self.getValue,
 			self.SNR_OID: self.getValue,
+			self.SNRDB_OID: self.getValue,
+			self.LOCK_OID: self.getValue,
 			self.HASPICTURE_OID: self.getValue,
 			self.VIDEO_BITRATE_OID: self.getValue,
 			self.AUDIO_BITRATE_OID: self.getValue,
@@ -75,6 +262,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			self.SERVICESTRING_OID: self.getValue,
 			self.FASTSCANSTRING_OID: self.getValue,
 			self.SERVICEPARAMS_OID: self.getValue,
+			self.TUNERTYPE_OID: self.getValue,
 			self.MANAGERIP_OID: self.getValue,
 			self.ENABLE_BITRATE_OID: self.getValue,
 			self.IP_OID: self.getValue,
@@ -82,8 +270,86 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			self.GATEWAY_OID: self.getValue,
 			self.ENABLE_EMM_OID: self.getValue,
 			self.EMM_OID: self.getValue,
+			self.CPU_USER: self.getValue,
+			self.CPU_NICE: self.getValue,
+			self.CPU_SYSTEM: self.getValue,
+			self.CPU_IDLE: self.getValue,
+			self.CPU_WAIT: self.getValue,
+			self.LOAD_AVR1: self.getValue,
+			self.LOAD_AVR5: self.getValue,
+			self.LOAD_AVR15: self.getValue,
+			self.MEM_TOTAL: self.getValue,
+			self.MEM_TOTAL2: self.getValue,
+			self.MEM_USED: self.getValue,
+			self.MEM_FREE: self.getValue,
+			self.MEM_BUFFER: self.getValue,
+			self.MEM_CACHED: self.getValue,
+			self.MEM_SWAPTOTAL: self.getValue,
+			self.MEM_SWAPFREE: self.getValue,
+			self.IF_NUMBER: self.getValue,
 		})
-		bisectoidstore.BisectOIDStore.__init__(self, OIDs = oids)
+
+		# Add disk info's
+		totaldisks = GetDiskInfo(DiskInfoTypes.totalmounts, 0)
+		for i in range(totaldisks):
+			key = '%s.%d' % (self.DISK_INDEX, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.DISK_PATHNAME, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.DISK_DEVICENAME, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.DISK_AVAIL, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.DISK_USED, (i + 1))
+			oids[key] = self.getValue
+
+		# Add network info's
+		totalnetworks = GetNetworkInfo(NetworkInfoTypes.total, 0)
+		for i in range(totalnetworks):
+			key = '%s.%d' % (self.IF_INDEX, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_DESC, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_TYPE, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_MTU, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_SPEED, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_HWADDR, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_STATUS, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_INOCTANTS, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_INDISCARD, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_INERRORS, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_OUTOCTANTS, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_OUTDISCARD, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_OUTERRORS, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_NAME, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_ALIAS, (i + 1))
+			oids[key] = self.getValue
+			key = '%s.%d' % (self.IF_HSPEED, (i + 1))
+			oids[key] = self.getValue
+
+			#special OID: IP address
+			key = '%s.%s' % (self.IP_ADENTIFINDEX, GetNetworkInfo(NetworkInfoTypes.ipaddr, i))
+			oids[key] = self.getValue
+			self.ip_adentifindex_ref[key] = i + 1
+
+			key = '%s.%s' % (self.IF_IPADENTADDR, GetNetworkInfo(NetworkInfoTypes.ipaddr, i))
+			oids[key] = self.getValue
+			self.ip_adentaddr_ref[key] = GetNetworkInfo(NetworkInfoTypes.ipaddr, i)
+
+
+		bisectoidstore.BisectOIDStore.__init__(self, OIDs=oids)
 		self.session.nav.event.append(self.gotServiceEvent)
 		if config.plugins.SnmpAgent.measurebitrate.value:
 			self.bitrate = Bitrate(session)
@@ -134,10 +400,91 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 
 	def getValue(self, oid, storage):
 		oidstring = bisectoidstore.sortableToOID(oid)
+		strOID = str(oidstring)
 		if oidstring == self.SYSTEMDESCRIPTION_OID:
 			return v1.OctetString(str(config.plugins.SnmpAgent.systemdescription.value))
 		elif oidstring == self.SYSUPTIME_OID:
 			return self.getSysUpTime()
+		elif oidstring == self.CPU_USER:
+			return v1.Counter(GetCPUStatForType(CPUStatTypes.user))
+		elif oidstring == self.CPU_NICE:
+			return v1.Counter(GetCPUStatForType(CPUStatTypes.nice))
+		elif oidstring == self.CPU_SYSTEM:
+			return v1.Counter(GetCPUStatForType(CPUStatTypes.system))
+		elif oidstring == self.CPU_IDLE:
+			return v1.Counter(GetCPUStatForType(CPUStatTypes.idle))
+		elif oidstring == self.CPU_WAIT:
+			return v1.Counter(GetCPUStatForType(CPUStatTypes.iowait))
+		elif oidstring == self.LOAD_AVR1:
+			return v1.OctetString(GetCPULoadForType(CPULoadTypes.one))
+		elif oidstring == self.LOAD_AVR5:
+			return v1.OctetString(GetCPULoadForType(CPULoadTypes.five))
+		elif oidstring == self.LOAD_AVR15:
+			return v1.OctetString(GetCPULoadForType(CPULoadTypes.fifteen))
+		elif oidstring == self.MEM_TOTAL:
+			return v1.Integer(GetMemoryForType(MemoryTypes.total))
+		elif oidstring == self.MEM_TOTAL2:
+			return v1.Integer(GetMemoryForType(MemoryTypes.total))
+		elif oidstring == self.MEM_USED:
+			return v1.Integer(GetMemoryForType(MemoryTypes.used))
+		elif oidstring == self.MEM_FREE:
+			return v1.Integer(GetMemoryForType(MemoryTypes.free))
+		elif oidstring == self.MEM_BUFFER:
+			return v1.Integer(GetMemoryForType(MemoryTypes.buffers))
+		elif oidstring == self.MEM_CACHED:
+			return v1.Integer(GetMemoryForType(MemoryTypes.cached))
+		elif oidstring == self.MEM_SWAPTOTAL:
+			return v1.Integer(GetMemoryForType(MemoryTypes.swaptotal))
+		elif oidstring == self.MEM_SWAPFREE:
+			return v1.Integer(GetMemoryForType(MemoryTypes.swapfree))
+		elif strOID.startswith(str(self.DISK_INDEX)):
+			return v1.Integer(int(strOID[len(str(self.DISK_INDEX)) + 1:]))
+		elif strOID.startswith(str(self.DISK_PATHNAME)):
+			return v1.OctetString(GetDiskInfo(DiskInfoTypes.mountpoint, int(strOID[len(str(self.DISK_PATHNAME)) + 1:]) - 1))
+		elif strOID.startswith(str(self.DISK_DEVICENAME)):
+			return v1.OctetString(GetDiskInfo(DiskInfoTypes.filesystem, int(strOID[len(str(self.DISK_DEVICENAME)) + 1:]) - 1))
+		elif strOID.startswith(str(self.DISK_AVAIL)):
+			return v1.Integer(GetDiskInfo(DiskInfoTypes.avail, int(strOID[len(str(self.DISK_AVAIL)) + 1:]) - 1))
+		elif strOID.startswith(str(self.DISK_USED)):
+			return v1.Integer(GetDiskInfo(DiskInfoTypes.used, int(strOID[len(str(self.DISK_USED)) + 1:]) - 1))
+		elif oidstring == self.IF_NUMBER:
+			return v1.Integer(GetNetworkInfo(NetworkInfoTypes.total, 0))
+		elif strOID.startswith(str(self.IP_ADENTIFINDEX)):
+			return v1.Integer(self.ip_adentifindex_ref[strOID])
+		elif strOID.startswith(str(self.IF_IPADENTADDR)):
+			return v1.IpAddress(self.ip_adentaddr_ref[strOID])
+		elif strOID.startswith(str(self.IF_INOCTANTS)):
+			return v1.Counter(GetNetworkInfo(NetworkInfoTypes.inoctants, int(strOID[len(str(self.IF_INOCTANTS)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_INDISCARD)):
+			return v1.Counter(GetNetworkInfo(NetworkInfoTypes.indiscard, int(strOID[len(str(self.IF_INDISCARD)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_INERRORS)):
+			return v1.Counter(GetNetworkInfo(NetworkInfoTypes.inerrors, int(strOID[len(str(self.IF_INERRORS)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_OUTOCTANTS)):
+			return v1.Counter(GetNetworkInfo(NetworkInfoTypes.outoctacts, int(strOID[len(str(self.IF_OUTOCTANTS)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_OUTDISCARD)):
+			return v1.Counter(GetNetworkInfo(NetworkInfoTypes.outdiscard, int(strOID[len(str(self.IF_OUTDISCARD)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_OUTERRORS)):
+			return v1.Counter(GetNetworkInfo(NetworkInfoTypes.outerrors, int(strOID[len(str(self.IF_OUTERRORS)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_ALIAS)):
+			return v1.OctetString(GetNetworkInfo(NetworkInfoTypes.alias, int(strOID[len(str(self.IF_ALIAS)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_HSPEED)):
+			return v1.Gauge(GetNetworkInfo(NetworkInfoTypes.hspeed, int(strOID[len(str(self.IF_HSPEED)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_INDEX)):
+			return v1.Integer(int(strOID[len(str(self.IF_INDEX)) + 1:]))
+		elif strOID.startswith(str(self.IF_DESC)):
+			return v1.OctetString(GetNetworkInfo(NetworkInfoTypes.desc, int(strOID[len(str(self.IF_DESC)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_NAME)):
+			return v1.OctetString(GetNetworkInfo(NetworkInfoTypes.desc, int(strOID[len(str(self.IF_NAME)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_TYPE)):
+			return v1.Integer(GetNetworkInfo(NetworkInfoTypes.type, int(strOID[len(str(self.IF_TYPE)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_MTU)):
+			return v1.Integer(GetNetworkInfo(NetworkInfoTypes.mtu, int(strOID[len(str(self.IF_MTU)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_SPEED)):
+			return v1.Gauge(GetNetworkInfo(NetworkInfoTypes.speed, int(strOID[len(str(self.IF_SPEED)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_HWADDR)):
+			return v1.OctetString(GetNetworkInfo(NetworkInfoTypes.hwaddr, int(strOID[len(str(self.IF_HWADDR)) + 1:]) - 1))
+		elif strOID.startswith(str(self.IF_STATUS)):
+			return v1.Integer(GetNetworkInfo(NetworkInfoTypes.status, int(strOID[len(str(self.IF_STATUS)) + 1:]) - 1))
 		elif oidstring == self.SUPPORTADDRESS_OID:
 			return v1.OctetString(str(config.plugins.SnmpAgent.supportaddress.value))
 		elif oidstring == self.SYSTEMNAME_OID:
@@ -147,9 +494,13 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 		elif oidstring == self.BER_OID:
 			return self.getBER()
 		elif oidstring == self.AGC_OID:
-			return self.getACG()
+			return self.getAGC()
 		elif oidstring == self.SNR_OID:
 			return self.getSNR()
+		elif oidstring == self.SNRDB_OID:
+			return self.getSNRDB()
+		elif oidstring == self.LOCK_OID:
+			return self.getLock()
 		elif oidstring == self.HASPICTURE_OID:
 			return self.haspicture
 		elif oidstring == self.VIDEO_BITRATE_OID:
@@ -170,6 +521,8 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			return v1.OctetString('')
 		elif oidstring == self.SERVICEPARAMS_OID:
 			return v1.OctetString(self.getServiceParams())
+		elif oidstring == self.TUNERTYPE_OID:
+			return self.getTunerType()
 		elif oidstring == self.MANAGERIP_OID:
 			return v1.OctetString(str(config.plugins.SnmpAgent.managerip.value))
 		elif oidstring == self.ENABLE_BITRATE_OID:
@@ -235,7 +588,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			if self.getChannelName() <> value.get():
 				root = config.tv.lastroot.value.split(';')
 				fav = eServiceReference(root[-2])
-				services = ServiceList(fav, command_func = self.zapTo, validate_commands = False)
+				services = ServiceList(fav, command_func=self.zapTo, validate_commands=False)
 				sub = services.getServicesAsList()
 
 				if len(sub) > 0:
@@ -250,7 +603,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			refstring = ''
 			fields = value.get().split(',')
 			if len(fields) >= 15:
-				onid,tsid,freq,id1,id2,sid,orbital_pos,f1,f2,f3,symbolrate,f4,name,provider,servicetype = fields[0:15]
+				onid, tsid, freq, id1, id2, sid, orbital_pos, f1, f2, f3, symbolrate, f4, name, provider, servicetype = fields[0:15]
 				refstring = '%d:%d:%d:%x:%x:%x:%x:%x:%x:%x:' % (1, 0, int(servicetype), int(sid), int(tsid), int(onid), int(orbital_pos) * 65536, 0, 0, 0)
 			if refstring is not '':
 				self.zapTo(eServiceReference(refstring))
@@ -258,7 +611,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			refstring = ''
 			fields = value.get().split(',')
 			if len(fields) >= 5:
-				orbital_pos,tsid,onid,sid,servicetype = fields[0:5]
+				orbital_pos, tsid, onid, sid, servicetype = fields[0:5]
 				refstring = '%d:%d:%d:%x:%x:%x:%x:%x:%x:%x:' % (1, 0, int(servicetype), int(sid), int(tsid), int(onid), int(orbital_pos) * 65536, 0, 0, 0)
 			if refstring is not '':
 				self.zapTo(eServiceReference(refstring))
@@ -328,13 +681,37 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 	def getAGC(self):
 		if self.session and self.session.nav and self.session.nav.getCurrentService():
 			feinfo = self.session.nav.getCurrentService().frontendInfo()
-			return feinfo.getFrontendInfo(iFrontendInformation.signalQuality) * 100 / 65536
+			return feinfo.getFrontendInfo(iFrontendInformation.signalPower) * 100 / 65536
 		return 0
 
 	def getSNR(self):
 		if self.session and self.session.nav and self.session.nav.getCurrentService():
 			feinfo = self.session.nav.getCurrentService().frontendInfo()
-			return feinfo.getFrontendInfo(iFrontendInformation.signalPower) * 100 / 65536
+			return feinfo.getFrontendInfo(iFrontendInformation.signalQuality) * 100 / 65536
+		return 0
+
+	def getSNRDB(self):
+		if self.session and self.session.nav and self.session.nav.getCurrentService():
+			feinfo = self.session.nav.getCurrentService().frontendInfo()
+			retval = feinfo.getFrontendInfo(iFrontendInformation.signalQualitydB)
+			if retval == 0x12345678:	#cable tuner? does not have SNR
+				return v1.OctetString ( 0.0 )
+			return v1.OctetString (str (int(retval) / 100.0))
+		return 0
+
+	def getTunerType(self):
+		if self.session and self.session.nav and self.session.nav.getCurrentService():
+			feinfo = self.session.nav.getCurrentService().frontendInfo()
+			frontendData = feinfo and feinfo.getAll(True)
+			if frontendData is not None:
+				ttype = frontendData.get("tuner_type", "UNKNOWN")
+				return v1.OctetString ( ttype )
+		return v1.OctetString ( "UNKNOWN" )
+
+	def getLock(self):
+		if self.session and self.session.nav and self.session.nav.getCurrentService():
+			feinfo = self.session.nav.getCurrentService().frontendInfo()
+			return feinfo.getFrontendInfo(iFrontendInformation.lockState)
 		return 0
 
 	def getChannelName(self):
@@ -364,13 +741,13 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			onid = int(servicedata[5], 16)
 			sid = int(servicedata[3], 16)
 			servicetype = servicedata[2]
-		params = str(orbital_pos) + "," + str(tsid), "," + str(onid) + "," + str(sid) + "," + str(servicetype)
+		params = str(orbital_pos) + "," + str(tsid) + "," + str(onid) + "," + str(sid) + "," + str(servicetype)
 		return params
 
 class Tuner:
 	def __init__(self, frontend):
 		self.frontend = frontend
-		
+
 	def tune(self, transponder):
 		if self.frontend:
 			print "tuning to transponder with data", transponder
@@ -382,12 +759,12 @@ class Tuner:
 			parm.inversion = transponder[4]
 			parm.orbital_position = transponder[5]
 			parm.system = 0  # FIXMEE !! HARDCODED DVB-S (add support for DVB-S2)
-			parm.modulation = 1 # FIXMEE !! HARDCODED QPSK 
+			parm.modulation = 1 # FIXMEE !! HARDCODED QPSK
 			feparm = eDVBFrontendParameters()
 			feparm.setDVBS(parm)
 			self.lastparm = feparm
 			self.frontend.tune(feparm)
-	
+
 	def retune(self):
 		if self.frontend:
 			self.frontend.tune(self.lastparm)
@@ -466,7 +843,7 @@ class ourTunerOIDStore(ourOIDStore):
 			self.transponderparams = value.get()
 			transponder = value.get().split(',')
 			if len(transponder) >= 6:
-				for i in range(0,6):
+				for i in range(0, 6):
 					transponder[i] = int(transponder[i])
 				print transponder
 				self.tune(transponder)
@@ -500,9 +877,9 @@ class ourTunerOIDStore(ourOIDStore):
 				frontendData = feinfo and feinfo.getAll(True)
 				if frontendData:
 					value += ' example for current transponder: '
-					value += str(frontendData["frequency"]/1000)
+					value += str(frontendData["frequency"] / 1000)
 					value += ','
-					value += str(frontendData["symbol_rate"]/1000)
+					value += str(frontendData["symbol_rate"] / 1000)
 					value += ','
 					if frontendData["polarization"] == 'HORIZONTAL':
 						value += '0'
@@ -519,94 +896,135 @@ class ourTunerOIDStore(ourOIDStore):
 		return v1.OctetString(value)
 
 class SnmpAgent:
-	oldmanagerip = ""
-	oldber = 0
-	theAgent = None
-	pollTimer = None
-	startTime = time.time()
-	oldmanagers = []
+    oldmanagerip = ""
+    oldber = 0
+    theAgent = None
+    pollTimer = None
+    startTime = time.time()
+    oldmanagers = []
+    agentObject = None
 
-	def __init__(self, session, storetype):
-		self.oidstore = storetype(session)
-		self.storetype = storetype
+    def __init__(self, session, storetype):
+        self.oidstore = storetype(session)
+        self.storetype = storetype
 
-		agentport, port = self.createAgent()
-		if port is not None:
-			print 'Listening on port', port
-			agentrunning = 1
-			self.theAgent = agentport.protocol.agent
-			self.pollTimer = eTimer()
-			self.pollTimer.timeout.get().append(self.timerPoll)
-			self.pollTimer.start(1000, False)
+        self.StartAgent()
 
-	def createAgent(self):
-		from twisted.internet import reactor
-		port = 161
-		try:
-			agentObject = reactor.listenUDP(
-				port, agentprotocol.AgentProtocol(
-					snmpVersion = 'v2c',
-					agent = agent.Agent(dataStore = self.oidstore),
-				),
-			)
-		except twisted_error.CannotListenError:
-			pass
-		else:
-			return agentObject, port
+    def createAgent(self):
+        from twisted.internet import reactor
+        port = 161
+        try:
+            self.agentObject = reactor.listenUDP(
+	            port, agentprotocol.AgentProtocol(
+		            snmpVersion='v2c',
+		            agent=agent.Agent(dataStore=self.oidstore),
+	            ),
+            )
+            self.theAgent = self.agentObject.protocol.agent
+        except twisted_error.CannotListenError:
+            pass
+        else:
+            return port
 
-	def timerPoll(self):
-		self.oidstore.timerPoll()
+    def stopAgent(self):
+        if self.agentObject != None:
+            self.pollTimer.stop()
+            self.agentObject.stopListening()
 
-		if self.theAgent:
-			managerip = config.plugins.SnmpAgent.managerip.value
+    def StartAgent(self):
+        port = self.createAgent()
+        if port is not None:
+            print 'Listening on port', port
+            agentrunning = 1
+            self.pollTimer = eTimer()
+            self.pollTimer.timeout.get().append(self.timerPoll)
+            self.pollTimer.start(1000, False)
 
-			if managerip <> self.oldmanagerip:
-				newmanagers = managerip.split(',')
-				for oldmanager in self.oldmanagers:
-					self.theAgent.deregisterTrap(oldmanager)
-				for newmanagerip in newmanagers:
-					handler = agent.TrapHandler(
-							managerIP = (newmanagerip, 162),
-						)
-					self.theAgent.registerTrap(handler)
+    def timerPoll(self):
+        self.oidstore.timerPoll()
 
-				self.oldmanagerip = managerip
-				self.oldmanagers = newmanagers
+        if self.theAgent:
+            managerip = config.plugins.SnmpAgent.managerip.value
 
-			if not len(managerip):
-				return
-			if managerip == '0.0.0.0':
-				return
+            if managerip <> self.oldmanagerip:
+                newmanagers = managerip.split(',')
+                for oldmanager in self.oldmanagers:
+                    self.theAgent.deregisterTrap(oldmanager)
+                for newmanagerip in newmanagers:
+                    handler = agent.TrapHandler(
+		                    managerIP=(newmanagerip, 162),
+	                    )
+                    self.theAgent.registerTrap(handler)
 
-			ber = self.oidstore.getBER()
-			if ber is not self.oldber:
-				self.oldber = ber
-				try:
-					self.theAgent.sendTrap(pdus = [(self.storetype.BER_OID, ber),])
-				except:
-					pass
+                self.oldmanagerip = managerip
+                self.oldmanagers = newmanagers
 
-my_agent = None
+            if not len(managerip):
+                return
+            if managerip == '0.0.0.0':
+                return
 
+            ber = self.oidstore.getBER()
+            if ber is not self.oldber:
+                self.oldber = ber
+                try:
+                    self.theAgent.sendTrap(pdus=[(self.storetype.BER_OID, ber), ])
+                except:
+                    pass
+
+#===============================================================================
+# stopSNMPserver
+# Actions to take place to stop the SNMPserver
+#===============================================================================
+def stopSNMPserver(session):
+    global global_my_agent
+    if global_my_agent != None:
+        global_my_agent.stopAgent()
+    print "[SNMPAgent] service stopped"
+
+
+#===============================================================================
+# startSNMPserver
+# Actions to take place to start the SNMPserver
+#===============================================================================
+def startSNMPserver(session):
+	global global_my_agent
+	global_my_agent = SnmpAgent(session, ourTunerOIDStore)
+	print "[SNMPAgent] started"
+
+
+#===============================================================================
+# sessionstart
+# Actions to take place on Session start
+#===============================================================================
+def sessionstart(reason, session):
+	global global_session
+	global_session = session
+
+#===============================================================================
+# autostart
+# Actions to take place in autostart (startup the SNMPAgent)
+#===============================================================================
 def autostartEntry(reason, **kwargs):
-	global my_agent
+	global global_my_agent
 
-	session = None
-	if kwargs.has_key("session"):
-		session = kwargs["session"]
+	if reason == 1 and config.plugins.SnmpAgent.startuptype.value:
+		startSNMPserver(global_session)
+	elif reason == 0:
+		stopSNMPserver(global_session)
 
-	if reason == 0:
-		print "startup"
-		my_agent = SnmpAgent(session, ourTunerOIDStore)
-	elif reason == 1:
-		print "shutdown"
-		#no need to shut the agent down, the pollTimer will stop triggering when enigma2 shuts down
-		my_agent = None
+#===============================================================================
+# main
+# Actions to take place when starting the plugin over extensions
+#===============================================================================
+def main(session, **kwargs):
+	session.open(SNMPAgent_MainMenu)
 
+#===============================================================================
+# plugins
+# Actions to take place in Plugins
+#===============================================================================
 def Plugins(**kwargs):
-	return PluginDescriptor(
-		name = "SnmpAgent",
-		description = "SNMP signal status agent",
-		where = PluginDescriptor.WHERE_SESSIONSTART,
-		fnc = autostartEntry
-		)
+	return [PluginDescriptor(where=[PluginDescriptor.WHERE_SESSIONSTART], fnc=sessionstart),
+			PluginDescriptor(where=[PluginDescriptor.WHERE_NETWORKCONFIG_READ], fnc=autostartEntry),
+			PluginDescriptor(name="SnmpAgent", description=_("SNMP Agent for Enigma2"), icon="SNMPAgent.png", where=PluginDescriptor.WHERE_PLUGINMENU, fnc=main)]

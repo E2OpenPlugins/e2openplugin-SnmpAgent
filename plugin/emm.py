@@ -9,16 +9,16 @@ class Emm():
 		self.pids = ''
 		self.running = False
 		self.container = eConsoleAppContainer()
-		self.container.appClosed.get().append(self.appClosed)
-		self.container.dataAvail.get().append(self.dataAvail)
+		self.container.appClosed.append(self.appClosed)
+		self.container.dataAvail.append(self.dataAvail)
 
 	def start(self):
 		if self.running:
 			return
 		service = self.session.nav.getCurrentService()
 		if service:
-			#stream() doesn't work in HEAD enigma2, default data demux for tuner 0 seems to be 3...
-			demux = 3
+			#stream() doesn't work in HEAD enigma2, default data demux for tuner 0 seems to be 2...
+			demux = 2
 			try:
 				stream = service.stream()
 				if stream:

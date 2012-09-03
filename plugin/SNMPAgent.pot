@@ -1,0 +1,114 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-09-02 10:15+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: plugin.py:99
+msgid "Startup type"
+msgstr ""
+
+#: plugin.py:99
+msgid "Should the SnmpAgent start automatically on startup?"
+msgstr ""
+
+#: plugin.py:100
+msgid "Manager IP"
+msgstr ""
+
+#: plugin.py:100
+msgid "Which IP Address is used for the manager?"
+msgstr ""
+
+#: plugin.py:101
+msgid "System Name"
+msgstr ""
+
+#: plugin.py:101
+msgid "Which name should be used to identify the device?"
+msgstr ""
+
+#: plugin.py:102
+msgid "System Description"
+msgstr ""
+
+#: plugin.py:102
+msgid "Description for the device"
+msgstr ""
+
+#: plugin.py:103
+msgid "Support Address"
+msgstr ""
+
+#: plugin.py:103
+msgid "Support Email Address"
+msgstr ""
+
+#: plugin.py:104
+msgid "Location"
+msgstr ""
+
+#: plugin.py:104
+msgid "Description of Location where the device resides"
+msgstr ""
+
+#: plugin.py:105
+msgid "Measure Bitrate"
+msgstr ""
+
+#: plugin.py:105
+msgid "Do bitrates have to be Monitored?"
+msgstr ""
+
+#: plugin.py:106
+msgid "Measure EMM"
+msgstr ""
+
+#: plugin.py:106
+msgid "Do EMMs have to be Monitored?"
+msgstr ""
+
+#: plugin.py:116
+msgid "Cancel"
+msgstr ""
+
+#: plugin.py:117
+msgid "Save"
+msgstr ""
+
+#: plugin.py:118
+msgid "Start Service"
+msgstr ""
+
+#: plugin.py:119
+msgid "Stop Service"
+msgstr ""
+
+#: plugin.py:141
+msgid "Service successfully started"
+msgstr ""
+
+#: plugin.py:146
+msgid "Service successfully stoped"
+msgstr ""
+
+#: plugin.py:167
+msgid "Settings for SnmpAgent V{0}"
+msgstr ""
+
+#: plugin.py:1030
+msgid "SNMP Agent for Enigma2"
+msgstr ""

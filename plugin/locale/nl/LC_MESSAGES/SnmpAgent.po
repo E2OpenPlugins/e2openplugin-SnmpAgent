@@ -1,0 +1,114 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: SNMPAgent\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-09-02 10:15+0200\n"
+"PO-Revision-Date: 2012-09-02 14:58+0100\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-Basepath: s:\\OpenPLI\\enigma2-plugins\\PLi\\SnmpAgent\\src\\\n"
+
+#: plugin.py:99
+msgid "Startup type"
+msgstr "Automatisch starten"
+
+#: plugin.py:99
+msgid "Should the SnmpAgent start automatically on startup?"
+msgstr "Moet de SnmpAgent automatisch gestart worden?"
+
+#: plugin.py:100
+msgid "Manager IP"
+msgstr "Luister IP adres"
+
+#: plugin.py:100
+msgid "Which IP Address is used for the manager?"
+msgstr "Op welk IP adres moet de manager luisteren?"
+
+#: plugin.py:101
+msgid "System Name"
+msgstr "Systeem naam"
+
+#: plugin.py:101
+msgid "Which name should be used to identify the device?"
+msgstr "Welke naam moet gebruikt worden om dit systeem te identificeren?"
+
+#: plugin.py:102
+msgid "System Description"
+msgstr "Systeem omschrijving"
+
+#: plugin.py:102
+msgid "Description for the device"
+msgstr "Omschrijving van dit aparaat"
+
+#: plugin.py:103
+msgid "Support Address"
+msgstr "ondersteuning adres"
+
+#: plugin.py:103
+msgid "Support Email Address"
+msgstr "ondersteuning email adres"
+
+#: plugin.py:104
+msgid "Location"
+msgstr "Locatie"
+
+#: plugin.py:104
+msgid "Description of Location where the device resides"
+msgstr "Omschrijving van de locatie waar dit aparaat zich bevind"
+
+#: plugin.py:105
+msgid "Measure Bitrate"
+msgstr "Bitrate meten"
+
+#: plugin.py:105
+msgid "Do bitrates have to be Monitored?"
+msgstr "Moeten bitrates worden gemeten?"
+
+#: plugin.py:106
+msgid "Measure EMM"
+msgstr "EMM meten"
+
+#: plugin.py:106
+msgid "Do EMMs have to be Monitored?"
+msgstr "Moeten EMMs worden gemeten?"
+
+#: plugin.py:116
+msgid "Cancel"
+msgstr "Stoppen"
+
+#: plugin.py:117
+msgid "Save"
+msgstr "Opslaan"
+
+#: plugin.py:118
+msgid "Start Service"
+msgstr ""
+
+#: plugin.py:119
+msgid "Stop Service"
+msgstr ""
+
+#: plugin.py:141
+msgid "Service successfully started"
+msgstr "Service succesvol gestart"
+
+#: plugin.py:146
+msgid "Service successfully stoped"
+msgstr "Service succesvol gestopt"
+
+# Version number is placed inside {0}
+#: plugin.py:167
+msgid "Settings for SnmpAgent V{0}"
+msgstr "Instellingen voor SnmpAgent V{0}"
+
+#: plugin.py:1030
+msgid "SNMP Agent for Enigma2"
+msgstr "SNMP Agent voor Enigma2"

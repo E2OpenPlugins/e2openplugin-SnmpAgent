@@ -1,0 +1,10 @@
+                           <<< SnmpAgent >>>
+                  
+           Open Source SNMP Agent for E2 based Linux set-top box
+
+  This file is open source software; you can redistribute it and/or modify
+     it under the terms of the GNU General Public License version 2 as
+               published by the Free Software Foundation.
+
+  To test the OID's you can make use of the program iReasoning MIB browser
+       Free for personal use: http://ireasoning.com/mibbrowser.shtml
