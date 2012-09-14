@@ -7,6 +7,6 @@ setup (name = 'enigma2-plugin-extensions-snmpagent',
        description = 'Snmp Agent to monitor your Enigma2 with a management system',
        package_dir = {pkg: 'plugin'},
        packages = [pkg],
-       package_data = {pkg: ['SnmpAgent.png', 'locale/*/LC_MESSAGES/*.mo']},
+       package_data = {pkg: ['SNMPAgent.png', 'locale/*/LC_MESSAGES/*.mo']},
        cmdclass = setup_translate.cmdclass, # for translation
       )

@@ -1,41 +1,27 @@
-import time, platform
-from enigma import eTimer, iFrontendInformation, iPlayableService
-from Plugins.Plugin import PluginDescriptor
-
-from Screens.MessageBox import MessageBox
-from Screens.Screen import Screen
-
-
 from Components.ActionMap import ActionMap
+from Components.config import config, getConfigListEntry, ConfigSubsection, ConfigSelection, ConfigEnableDisable
+from Components.config import ConfigInteger, ConfigSubList, ConfigSubDict, ConfigText
+from Components.config import configfile, ConfigYesNo, ConfigPassword
+from Components.Label import Label
 from Components.ConfigList import ConfigList, ConfigListScreen
-from Components.Sources.StaticText import StaticText
-
-from Components.config import config
-from Components.config import ConfigSubsection
-from Components.config import ConfigSelection
-from Components.config import getConfigListEntry
-from Components.config import ConfigInteger
-from Components.config import ConfigSubList
-from Components.config import ConfigSubDict
-from Components.config import ConfigText
-from Components.config import configfile
-from Components.config import ConfigYesNo
-from Components.config import ConfigPassword
-
 from Components.Network import iNetwork
+from Components.Sources.ServiceList import ServiceList
+from enigma import eTimer, iFrontendInformation, iPlayableService, eActionMap, eServiceReference, iServiceInformation
+from enigma import eDVBResourceManager, eDVBFrontendParametersSatellite, eDVBFrontendParameters
+import NavigationInstance
+from Plugins.Plugin import PluginDescriptor
+from Screens.Screen import Screen
+from Screens.MessageBox import MessageBox
+import time, platform
 
+# SNMP support
 from twisted.internet import error as twisted_error
 from twistedsnmp import agent, agentprotocol, bisectoidstore
 from twistedsnmp.pysnmpproto import v1, oid
 
-from Components.Sources.ServiceList import ServiceList
-from enigma import eServiceReference, iServiceInformation
-
-from enigma import eDVBResourceManager, eDVBFrontendParametersSatellite, eDVBFrontendParameters
-
+# import own classes
 from bitrate import Bitrate
 from emm import Emm
-
 from cpu import GetCPUStatForType, CPUStatTypes
 from loadavr import GetCPULoadForType, CPULoadTypes
 from memory import GetMemoryForType, MemoryTypes
@@ -46,7 +32,6 @@ from network import GetNetworkInfo, NetworkInfoTypes
 from . import _
 
 config.plugins.SnmpAgent = ConfigSubsection()
-
 config.plugins.SnmpAgent.startuptype = ConfigYesNo(default=True)
 config.plugins.SnmpAgent.managerip = ConfigText(default='0.0.0.0')
 config.plugins.SnmpAgent.systemname = ConfigText(default=platform.node())
@@ -76,18 +61,19 @@ global_my_agent = None
 # SNMPAgentMainMenu
 #===============================================================================
 class SNMPAgent_MainMenu(Screen, ConfigListScreen):
-	skin = """<screen name="SNMPAgent_MainMenu" title="SNMP Agent Menu" position="center,center" size="565,370">
-		<ePixmap pixmap="skin_default/buttons/red.png" position="0,0" size="140,40" alphatest="on" />
-		<ePixmap pixmap="skin_default/buttons/green.png" position="140,0" size="140,40" alphatest="on" />
-		<ePixmap pixmap="skin_default/buttons/yellow.png" position="280,0" size="140,40" alphatest="on" />
-		<ePixmap pixmap="skin_default/buttons/blue.png" position="420,0" size="140,40" alphatest="on" />
-		<widget source="key_red" render="Label" position="0,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
-		<widget source="key_green" render="Label" position="140,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
-		<widget source="key_yellow" render="Label" position="280,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
-		<widget source="key_blue" render="Label" position="420,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
-		<widget name="config" position="5,50" size="555,250" scrollbarMode="showOnDemand" />
-		<ePixmap pixmap="skin_default/div-h.png" position="0,301" zPosition="1" size="565,2" />
-	</screen>"""
+	skin = """
+  <screen name="SNMPAgent_MainMenu" title="SNMP Agent Menu" position="center,center" size="565,370">
+    <ePixmap name="red" position="0,0" size="140,40" pixmap="skin_default/buttons/red.png" alphatest="on" />
+    <ePixmap name="green" position="140,0" size="140,40" pixmap="skin_default/buttons/green.png" alphatest="on" />
+    <ePixmap name="yellow" position="280,0" size="140,40" pixmap="skin_default/buttons/yellow.png" alphatest="on" />
+    <ePixmap name="blue" position="420,0" size="140,40" pixmap="skin_default/buttons/blue.png" alphatest="on" />
+    <widget name="key_red" position="0,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
+    <widget name="key_green" position="140,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+    <widget name="key_yellow" position="280,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+    <widget name="key_blue" position="420,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+    <widget name="config" position="5,50" size="555,250" scrollbarMode="showOnDemand" />
+    <ePixmap pixmap="skin_default/div-h.png" position="0,301" zPosition="1" size="565,2" />
+  </screen>"""
 
 	def __init__(self, session, args=None):
 		self.skin = SNMPAgent_MainMenu.skin
@@ -113,24 +99,34 @@ class SNMPAgent_MainMenu(Screen, ConfigListScreen):
 		self._hasChanged = False
 
 		# Initialize widgets
-		self["key_red"] = StaticText(_("Cancel"))
-		self["key_green"] = StaticText(_("Save"))
-		self["key_yellow"] = StaticText(_("Start Service"))
-		self["key_blue"] = StaticText(_("Stop Service"))
+		self["key_red"] = Label(_("Cancel"))
+		self["key_green"] = Label(_("Save"))
+		self["key_yellow"] = Label(_("Start Service"))
+		self["key_blue"] = Label(_("Stop Service"))
 
 		# Define Actions
-		self["setupActions"] = ActionMap(["SetupActions", "ColorActions"],
+		self["actions"] = ActionMap(["WizardActions", "ColorActions"],
 		{
+      "red": self.keyCancel,
 			"green": self.keySave,
-			"blue": self.keyStop,
 			"yellow": self.keyStart,
-			"cancel": self.keyCancel,
+			"blue": self.keyStop,
+      "back": self.keyCancel,		
 		}, -2)
 
 		self.onLayoutFinish.append(self.setCustomTitle)
 
 	def _changed(self):
 		self._hasChanged = True
+
+	def keySave(self):
+		print "[SnmpAgent] pressed save"
+		self.saveAll()
+		self.close()
+
+	def keyCancel(self):
+		print "[SnmpAgent] pressed cancel"
+		self.close()
 
 	def keyStart(self):
 		print "[SnmpAgent] pressed start"
@@ -145,10 +141,6 @@ class SNMPAgent_MainMenu(Screen, ConfigListScreen):
 		stopSNMPserver(global_session)
 		self.session.openWithCallback(self.close, MessageBox, _("Service successfully stoped"), MessageBox.TYPE_INFO, timeout=5)
 
-	def keySave(self):
-		print "[SnmpAgent] pressed save"
-		self.saveAll()
-		self.close()
 
 	def quitPlugin(self, answer):
 		if answer is True:
