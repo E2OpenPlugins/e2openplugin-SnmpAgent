@@ -19,20 +19,25 @@ class Bitrate():
 			return
 		service = self.session.nav.getCurrentService()
 		if service:
-			#stream() doesn't work in HEAD enigma2, default data demux for tuner 0 seems to be 2...
-			demux = 2
+			adapter = 0
+			demux = 0
 			try:
 				stream = service.stream()
 				if stream:
 					streamdata = stream.getStreamingData()
-					if streamdata and 'demux' in streamdata:
-						demux = streamdata["demux"]
+					if streamdata:
+						if 'demux' in streamdata:
+							demux = streamdata["demux"]
+						if 'adapter' in streamdata:
+							adapter = streamdata["adapter"]
 			except:
 				pass
 			info = service.info()
 			vpid = info.getInfo(iServiceInformation.sVideoPID)
 			apid = info.getInfo(iServiceInformation.sAudioPID)
 			cmd = "bitrate "
+			cmd += str(adapter)
+			cmd += " "
 			cmd += str(demux)
 			cmd += " "
 			cmd += str(vpid)
