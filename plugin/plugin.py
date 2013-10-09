@@ -667,7 +667,8 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 	def getBER(self):
 		if self.session and self.session.nav and self.session.nav.getCurrentService():
 			feinfo = self.session.nav.getCurrentService().frontendInfo()
-			return feinfo.getFrontendInfo(iFrontendInformation.bitErrorRate)
+			if feinfo:
+				return feinfo.getFrontendInfo(iFrontendInformation.bitErrorRate)
 		return 0
 
 	def getAGC(self):
@@ -679,16 +680,18 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 	def getSNR(self):
 		if self.session and self.session.nav and self.session.nav.getCurrentService():
 			feinfo = self.session.nav.getCurrentService().frontendInfo()
-			return feinfo.getFrontendInfo(iFrontendInformation.signalQuality) * 100 / 65536
+			if feinfo:
+				return feinfo.getFrontendInfo(iFrontendInformation.signalQuality) * 100 / 65536
 		return 0
 
 	def getSNRDB(self):
 		if self.session and self.session.nav and self.session.nav.getCurrentService():
 			feinfo = self.session.nav.getCurrentService().frontendInfo()
-			retval = feinfo.getFrontendInfo(iFrontendInformation.signalQualitydB)
-			if retval == 0x12345678:	#cable tuner? does not have SNR
-				return v1.OctetString ( 0.0 )
-			return v1.OctetString (str (int(retval) / 100.0))
+			if feinfo:
+				retval = feinfo.getFrontendInfo(iFrontendInformation.signalQualitydB)
+				if retval == 0x12345678:	#cable tuner? does not have SNR
+					return v1.OctetString ( 0.0 )
+				return v1.OctetString (str (int(retval) / 100.0))
 		return 0
 
 	def getTunerType(self):
@@ -703,7 +706,8 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 	def getLock(self):
 		if self.session and self.session.nav and self.session.nav.getCurrentService():
 			feinfo = self.session.nav.getCurrentService().frontendInfo()
-			return feinfo.getFrontendInfo(iFrontendInformation.lockState)
+			if feinfo:
+				return feinfo.getFrontendInfo(iFrontendInformation.lockState)
 		return 0
 
 	def getChannelName(self):
