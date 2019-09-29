@@ -63,16 +63,16 @@ global_my_agent = None
 class SNMPAgent_MainMenu(Screen, ConfigListScreen):
 	skin = """
   <screen name="SNMPAgent_MainMenu" title="SNMP Agent Menu" position="center,center" size="565,370">
-    <ePixmap name="red" position="0,0" size="140,40" pixmap="buttons/red.png" alphatest="on" />
-    <ePixmap name="green" position="140,0" size="140,40" pixmap="buttons/green.png" alphatest="on" />
-    <ePixmap name="yellow" position="280,0" size="140,40" pixmap="buttons/yellow.png" alphatest="on" />
-    <ePixmap name="blue" position="420,0" size="140,40" pixmap="buttons/blue.png" alphatest="on" />
+    <ePixmap name="red" position="0,0" size="140,40" pixmap="skin_default/buttons/red.png" alphatest="on" />
+    <ePixmap name="green" position="140,0" size="140,40" pixmap="skin_default/buttons/green.png" alphatest="on" />
+    <ePixmap name="yellow" position="280,0" size="140,40" pixmap="skin_default/buttons/yellow.png" alphatest="on" />
+    <ePixmap name="blue" position="420,0" size="140,40" pixmap="skin_default/buttons/blue.png" alphatest="on" />
     <widget name="key_red" position="0,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
     <widget name="key_green" position="140,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
     <widget name="key_yellow" position="280,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
     <widget name="key_blue" position="420,0" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
     <widget name="config" position="5,50" size="555,250" scrollbarMode="showOnDemand" />
-    <ePixmap pixmap="div-h.png" position="0,301" zPosition="1" size="565,2" />
+    <ePixmap pixmap="skin_default/div-h.png" position="0,301" zPosition="1" size="565,2" />
   </screen>"""
 
 	def __init__(self, session, args=None):
