@@ -599,7 +599,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			if len(fields) >= 15:
 				onid, tsid, freq, id1, id2, sid, orbital_pos, f1, f2, f3, symbolrate, f4, name, provider, servicetype = fields[0:15]
 				refstring = '%d:%d:%d:%x:%x:%x:%x:%x:%x:%x:' % (1, 0, int(servicetype), int(sid), int(tsid), int(onid), int(orbital_pos) * 65536, 0, 0, 0)
-			if refstring is not '':
+			if refstring != '':
 				self.zapTo(eServiceReference(refstring))
 		elif oidstring == self.SERVICEPARAMS_OID:
 			refstring = ''
@@ -607,7 +607,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			if len(fields) >= 5:
 				orbital_pos, tsid, onid, sid, servicetype = fields[0:5]
 				refstring = '%d:%d:%d:%x:%x:%x:%x:%x:%x:%x:' % (1, 0, int(servicetype), int(sid), int(tsid), int(onid), int(orbital_pos) * 65536, 0, 0, 0)
-			if refstring is not '':
+			if refstring != '':
 				self.zapTo(eServiceReference(refstring))
 		elif oidstring == self.IP_OID:
 			ipstring = value.get().split('.')
