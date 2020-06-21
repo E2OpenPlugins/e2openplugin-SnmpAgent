@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 from Components.ActionMap import ActionMap
 from Components.config import config, getConfigListEntry, ConfigSubsection, ConfigSelection, ConfigEnableDisable
 from Components.config import ConfigInteger, ConfigSubList, ConfigSubDict, ConfigText
@@ -20,13 +22,13 @@ from twistedsnmp import agent, agentprotocol, bisectoidstore
 from twistedsnmp.pysnmpproto import v1, oid
 
 # import own classes
-from bitrate import Bitrate
-from emm import Emm
-from cpu import GetCPUStatForType, CPUStatTypes
-from loadavr import GetCPULoadForType, CPULoadTypes
-from memory import GetMemoryForType, MemoryTypes
-from disk import GetDiskInfo, DiskInfoTypes
-from network import GetNetworkInfo, NetworkInfoTypes
+from .bitrate import Bitrate
+from .emm import Emm
+from .cpu import GetCPUStatForType, CPUStatTypes
+from .loadavr import GetCPULoadForType, CPULoadTypes
+from .memory import GetMemoryForType, MemoryTypes
+from .disk import GetDiskInfo, DiskInfoTypes
+from .network import GetNetworkInfo, NetworkInfoTypes
 
 # for localized messages
 from . import _
@@ -120,24 +122,24 @@ class SNMPAgent_MainMenu(Screen, ConfigListScreen):
 		self._hasChanged = True
 
 	def keySave(self):
-		print "[SnmpAgent] pressed save"
+		print("[SnmpAgent] pressed save")
 		self.saveAll()
 		self.close()
 
 	def keyCancel(self):
-		print "[SnmpAgent] pressed cancel"
+		print("[SnmpAgent] pressed cancel")
 		self.close()
 
 	def keyStart(self):
-		print "[SnmpAgent] pressed start"
-		print "[SnmpAgent] trying to stop if running"
+		print("[SnmpAgent] pressed start")
+		print("[SnmpAgent] trying to stop if running")
 		stopSNMPserver(global_session)
-		print "[SnmpAgent] trying to start"
+		print("[SnmpAgent] trying to start")
 		startSNMPserver(global_session)
 		self.session.openWithCallback(self.close, MessageBox, _("Service successfully started"), MessageBox.TYPE_INFO, timeout=5)
 
 	def keyStop(self):
-		print "[SnmpAgent] pressed stop"
+		print("[SnmpAgent] pressed stop")
 		stopSNMPserver(global_session)
 		self.session.openWithCallback(self.close, MessageBox, _("Service successfully stoped"), MessageBox.TYPE_INFO, timeout=5)
 
@@ -362,7 +364,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			pass
 		if len(data):
 			frames = int(data, 16)
-			if self.oldframes <> frames:
+			if self.oldframes != frames:
 				self.haspicture = True
 				self.oldframes = frames
 			else:
@@ -545,7 +547,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 
 		oidstring = bisectoidstore.sortableToOID(oid)
 		if oidstring == self.MANAGERIP_OID:
-			if config.plugins.SnmpAgent.managerip.value <> value.get():
+			if config.plugins.SnmpAgent.managerip.value != value.get():
 				config.plugins.SnmpAgent.managerip.value = value.get()
 				config.plugins.SnmpAgent.managerip.save()
 		elif oidstring == self.ENABLE_BITRATE_OID:
@@ -561,23 +563,23 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 				self.bitrate = Bitrate(self.session)
 				self.bitrate.start()
 		elif oidstring == self.SYSTEMNAME_OID:
-			if config.plugins.SnmpAgent.systemname.value <> value.get():
+			if config.plugins.SnmpAgent.systemname.value != value.get():
 				config.plugins.SnmpAgent.systemname.value = value.get()
 				config.plugins.SnmpAgent.systemname.save()
 		elif oidstring == self.SUPPORTADDRESS_OID:
-			if config.plugins.SnmpAgent.supportaddress.value <> value.get():
+			if config.plugins.SnmpAgent.supportaddress.value != value.get():
 				config.plugins.SnmpAgent.supportaddress.value = value.get()
 				config.plugins.SnmpAgent.supportaddress.save()
 		elif oidstring == self.SYSTEMDESCRIPTION_OID:
-			if config.plugins.SnmpAgent.systemdescription.value <> value.get():
+			if config.plugins.SnmpAgent.systemdescription.value != value.get():
 				config.plugins.SnmpAgent.systemdescription.value = value.get()
 				config.plugins.SnmpAgent.systemdescription.save()
 		elif oidstring == self.LOCATION_OID:
-			if config.plugins.SnmpAgent.location.value <> value.get():
+			if config.plugins.SnmpAgent.location.value != value.get():
 				config.plugins.SnmpAgent.location.value = value.get()
 				config.plugins.SnmpAgent.location.save()
 		elif oidstring == self.CHANNELNAME_OID:
-			if self.getChannelName() <> value.get():
+			if self.getChannelName() != value.get():
 				root = config.tv.lastroot.value.split(';')
 				fav = eServiceReference(root[-2])
 				services = ServiceList(fav, command_func=self.zapTo, validate_commands=False)
@@ -589,7 +591,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 							self.zapTo(eServiceReference(ref))
 							break
 		elif oidstring == self.SERVICESTRING_OID:
-			if self.getServiceString() <> value.get():
+			if self.getServiceString() != value.get():
 				self.zapTo(eServiceReference(value.get()))
 		elif oidstring == self.FASTSCANSTRING_OID:
 			refstring = ''
@@ -612,7 +614,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			ipval = []
 			for x in ipstring:
 				ipval.append(int(x))
-			if iNetwork.getAdapterAttribute(self.iface, "ip") <> ipval:
+			if iNetwork.getAdapterAttribute(self.iface, "ip") != ipval:
 				iNetwork.setAdapterAttribute(self.iface, "dhcp", 0)
 				iNetwork.setAdapterAttribute(self.iface, "ip", ipval)
 				iNetwork.deactivateNetworkConfig()
@@ -623,7 +625,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			ipval = []
 			for x in ipstring:
 				ipval.append(int(x))
-			if iNetwork.getAdapterAttribute(self.iface, "netmask") <> ipval:
+			if iNetwork.getAdapterAttribute(self.iface, "netmask") != ipval:
 				iNetwork.setAdapterAttribute(self.iface, "dhcp", 0)
 				iNetwork.setAdapterAttribute(self.iface, "netmask", ipval)
 				iNetwork.deactivateNetworkConfig()
@@ -634,7 +636,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			ipval = []
 			for x in ipstring:
 				ipval.append(int(x))
-			if iNetwork.getAdapterAttribute(self.iface, "gateway") <> ipval:
+			if iNetwork.getAdapterAttribute(self.iface, "gateway") != ipval:
 				iNetwork.setAdapterAttribute(self.iface, "dhcp", 0)
 				iNetwork.setAdapterAttribute(self.iface, "gateway", ipval)
 				iNetwork.deactivateNetworkConfig()
@@ -653,7 +655,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 				self.emm = Emm(self.session)
 				self.emm.start()
 		else:
-			print "oid not found!?"
+			print("oid not found!?")
 
 		return None
 
@@ -746,7 +748,7 @@ class Tuner:
 
 	def tune(self, transponder):
 		if self.frontend:
-			print "tuning to transponder with data", transponder
+			print("tuning to transponder with data", transponder)
 			parm = eDVBFrontendParametersSatellite()
 			parm.frequency = transponder[0] * 1000
 			parm.symbol_rate = transponder[1] * 1000
@@ -809,11 +811,11 @@ class ourTunerOIDStore(ourOIDStore):
 				if self.frontend:
 					return True
 				else:
-					print "getFrontend failed"
+					print("getFrontend failed")
 			else:
-				print "getRawChannel failed"
+				print("getRawChannel failed")
 		else:
-			print "getResourceManager instance failed"
+			print("getResourceManager instance failed")
 		return False
 
 	def tune(self, transponder):
@@ -835,13 +837,13 @@ class ourTunerOIDStore(ourOIDStore):
 
 		oidstring = bisectoidstore.sortableToOID(oid)
 		if oidstring == self.TRANSPONDERPARAMS_OID:
-			print value.get()
+			print(value.get())
 			self.transponderparams = value.get()
 			transponder = value.get().split(',')
 			if len(transponder) >= 6:
 				for i in range(0, 6):
 					transponder[i] = int(transponder[i])
-				print transponder
+				print(transponder)
 				self.tune(transponder)
 			return None
 		else:
@@ -930,7 +932,7 @@ class SnmpAgent:
     def StartAgent(self):
         port = self.createAgent()
         if port is not None:
-            print 'Listening on port', port
+            print('Listening on port', port)
             agentrunning = 1
             self.pollTimer = eTimer()
             self.pollTimer.timeout.get().append(self.timerPoll)
@@ -942,7 +944,7 @@ class SnmpAgent:
         if self.theAgent:
             managerip = config.plugins.SnmpAgent.managerip.value
 
-            if managerip <> self.oldmanagerip:
+            if managerip != self.oldmanagerip:
                 newmanagers = managerip.split(',')
                 for oldmanager in self.oldmanagers:
                     self.theAgent.deregisterTrap(oldmanager)
@@ -976,7 +978,7 @@ def stopSNMPserver(session):
     global global_my_agent
     if global_my_agent != None:
         global_my_agent.stopAgent()
-    print "[SNMPAgent] service stopped"
+    print("[SNMPAgent] service stopped")
 
 
 #===============================================================================
@@ -986,7 +988,7 @@ def stopSNMPserver(session):
 def startSNMPserver(session):
 	global global_my_agent
 	global_my_agent = SnmpAgent(session, ourTunerOIDStore)
-	print "[SNMPAgent] started"
+	print("[SNMPAgent] started")
 
 
 #===============================================================================
