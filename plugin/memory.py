@@ -31,7 +31,7 @@ def GetMemoryForType(memorytype):
 		if memorytype == MemoryTypes.total:
 			return long(memTotal)
 		elif memorytype == MemoryTypes.used:
-			return long(memTotal)-long(memFree)
+			return long(memTotal) - long(memFree)
 		elif memorytype == MemoryTypes.free:
 			return long(memFree)
 		elif memorytype == MemoryTypes.buffers:

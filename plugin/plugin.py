@@ -239,7 +239,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 		oids.update({
 			self.SYSTEMDESCRIPTION_OID: self.getValue,
 			'.1.3.6.1.2.1.1.2.0': '.1.3.6.1.4.1.88.3.1',
-			self.SYSUPTIME_OID:  self.getValue,
+			self.SYSUPTIME_OID: self.getValue,
 			self.SUPPORTADDRESS_OID: self.getValue,
 			self.SYSTEMNAME_OID: self.getValue,
 			self.LOCATION_OID: self.getValue,

@@ -8,6 +8,6 @@ CPUStatTypes = enum('user', 'nice', 'system', 'idle', 'iowait', 'irq', 'softirq'
 def GetCPUStatForType(cputype):
 	try:
 		cpu_stat = open('/proc/stat', 'r').readline().strip().split()
-		return long(cpu_stat[cputype+1])
+		return long(cpu_stat[cputype + 1])
 	except:
 		return 0
