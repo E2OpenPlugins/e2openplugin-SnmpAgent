@@ -4,11 +4,14 @@ from collections import namedtuple
 
 _ntuple_diskusage = namedtuple('diskusage', 'total used free')
 
+
 def enum(*sequential, **named):
     enums = dict(zip(sequential, range(len(sequential))), **named)
     return type('Enum', (), enums)
 
+
 DiskInfoTypes = enum('totalmounts', 'mountpoint', 'filesystem', 'used', 'avail', 'total')
+
 
 def disk_usage(path):
     st = os.statvfs(path)
@@ -16,6 +19,7 @@ def disk_usage(path):
     total = st.f_blocks * st.f_frsize
     used = (st.f_blocks - st.f_bfree) * st.f_frsize
     return _ntuple_diskusage(total, used, free)
+
 
 def GetDiskInfo(infotype, devindex):
 	try:

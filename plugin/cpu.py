@@ -2,6 +2,7 @@ def enum(*sequential, **named):
     enums = dict(zip(sequential, range(len(sequential))), **named)
     return type('Enum', (), enums)
 
+
 CPUStatTypes = enum('user', 'nice', 'system', 'idle', 'iowait', 'irq', 'softirq', 'steal_time')
 
 

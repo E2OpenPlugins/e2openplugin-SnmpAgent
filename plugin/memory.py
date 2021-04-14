@@ -2,12 +2,15 @@ def enum(*sequential, **named):
     enums = dict(zip(sequential, range(len(sequential))), **named)
     return type('Enum', (), enums)
 
+
 MemoryTypes = enum('total', 'used', 'free', 'buffers', 'cached', 'swaptotal', 'swapfree')
+
 
 def readLines(filename):
     f = open(filename, "r")
     lines = f.readlines()
     return lines
+
 
 def readMemValues():
     global memTotal, memFree, memBuffers, memCached, swapTotal, swapFree
@@ -24,6 +27,7 @@ def readMemValues():
             swapTotal = line.split()[1]
         if line.split()[0] == 'SwapFree:':
             swapFree = line.split()[1]
+
 
 def GetMemoryForType(memorytype):
 	try:
