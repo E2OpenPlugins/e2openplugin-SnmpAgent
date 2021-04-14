@@ -12,7 +12,8 @@ import NavigationInstance
 from Plugins.Plugin import PluginDescriptor
 from Screens.Screen import Screen
 from Screens.MessageBox import MessageBox
-import time, platform
+import time
+import platform
 
 # SNMP support
 from twisted.internet import error as twisted_error
