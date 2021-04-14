@@ -157,7 +157,7 @@ class SNMPAgent_MainMenu(Screen, ConfigListScreen):
 
 	def setCustomTitle(self):
 		#TRANSLATORS: SnmpAgent settings window title, the plugin version is printed in {0}
-		self.setTitle( _("Settings for SnmpAgent V{0}").format(versionstr))
+		self.setTitle(_("Settings for SnmpAgent V{0}").format(versionstr))
 
 class ourOIDStore(bisectoidstore.BisectOIDStore):
 	startTime = time.time()
@@ -691,8 +691,8 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			if feinfo:
 				retval = feinfo.getFrontendInfo(iFrontendInformation.signalQualitydB)
 				if retval == 0x12345678:	#cable tuner? does not have SNR
-					return v1.OctetString ( 0.0 )
-				return v1.OctetString (str (int(retval) / 100.0))
+					return v1.OctetString(0.0)
+				return v1.OctetString(str(int(retval) / 100.0))
 		return 0
 
 	def getTunerType(self):
@@ -701,8 +701,8 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			frontendData = feinfo and feinfo.getAll(True)
 			if frontendData is not None:
 				ttype = frontendData.get("tuner_type", "UNKNOWN")
-				return v1.OctetString ( ttype )
-		return v1.OctetString ( "UNKNOWN" )
+				return v1.OctetString(ttype)
+		return v1.OctetString("UNKNOWN")
 
 	def getLock(self):
 		if self.session and self.session.nav and self.session.nav.getCurrentService():
