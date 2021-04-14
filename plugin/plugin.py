@@ -114,7 +114,7 @@ class SNMPAgent_MainMenu(Screen, ConfigListScreen):
 			"green": self.keySave,
 			"yellow": self.keyStart,
 			"blue": self.keyStop,
-      "back": self.keyCancel,		
+      "back": self.keyCancel,
 		}, -2)
 
 		self.onLayoutFinish.append(self.setCustomTitle)
