@@ -1,11 +1,14 @@
 import os
 from collections import namedtuple
 
+
 def enum(*sequential, **named):
     enums = dict(zip(sequential, range(len(sequential))), **named)
     return type('Enum', (), enums)
 
+
 NetworkInfoTypes = enum('total', 'ipaddr', 'desc', 'alias', 'type', 'mtu', 'speed', 'hspeed', 'hwaddr', 'status', 'inoctants', 'indiscard', 'inerrors', 'outoctacts', 'outdiscard', 'outerrors')
+
 
 def disk_usage(path):
     st = os.statvfs(path)
@@ -13,6 +16,7 @@ def disk_usage(path):
     total = st.f_blocks * st.f_frsize
     used = (st.f_blocks - st.f_bfree) * st.f_frsize
     return _ntuple_diskusage(total, used, free)
+
 
 def GetNetworkInfo(infotype, devindex):
 	try:

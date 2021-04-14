@@ -12,7 +12,8 @@ import NavigationInstance
 from Plugins.Plugin import PluginDescriptor
 from Screens.Screen import Screen
 from Screens.MessageBox import MessageBox
-import time, platform
+import time
+import platform
 
 # SNMP support
 from twisted.internet import error as twisted_error
@@ -60,6 +61,8 @@ global_my_agent = None
 # class
 # SNMPAgentMainMenu
 #===============================================================================
+
+
 class SNMPAgent_MainMenu(Screen, ConfigListScreen):
 	skin = """
   <screen name="SNMPAgent_MainMenu" title="SNMP Agent Menu" position="center,center" size="565,370">
@@ -111,7 +114,7 @@ class SNMPAgent_MainMenu(Screen, ConfigListScreen):
 			"green": self.keySave,
 			"yellow": self.keyStart,
 			"blue": self.keyStop,
-      "back": self.keyCancel,		
+      "back": self.keyCancel,
 		}, -2)
 
 		self.onLayoutFinish.append(self.setCustomTitle)
@@ -141,7 +144,6 @@ class SNMPAgent_MainMenu(Screen, ConfigListScreen):
 		stopSNMPserver(global_session)
 		self.session.openWithCallback(self.close, MessageBox, _("Service successfully stoped"), MessageBox.TYPE_INFO, timeout=5)
 
-
 	def quitPlugin(self, answer):
 		if answer is True:
 			self.close()
@@ -156,7 +158,8 @@ class SNMPAgent_MainMenu(Screen, ConfigListScreen):
 
 	def setCustomTitle(self):
 		#TRANSLATORS: SnmpAgent settings window title, the plugin version is printed in {0}
-		self.setTitle( _("Settings for SnmpAgent V{0}").format(versionstr))
+		self.setTitle(_("Settings for SnmpAgent V{0}").format(versionstr))
+
 
 class ourOIDStore(bisectoidstore.BisectOIDStore):
 	startTime = time.time()
@@ -238,7 +241,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 		oids.update({
 			self.SYSTEMDESCRIPTION_OID: self.getValue,
 			'.1.3.6.1.2.1.1.2.0': '.1.3.6.1.4.1.88.3.1',
-			self.SYSUPTIME_OID:  self.getValue,
+			self.SYSUPTIME_OID: self.getValue,
 			self.SUPPORTADDRESS_OID: self.getValue,
 			self.SYSTEMNAME_OID: self.getValue,
 			self.LOCATION_OID: self.getValue,
@@ -339,7 +342,6 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			key = '%s.%s' % (self.IF_IPADENTADDR, GetNetworkInfo(NetworkInfoTypes.ipaddr, i))
 			oids[key] = self.getValue
 			self.ip_adentaddr_ref[key] = GetNetworkInfo(NetworkInfoTypes.ipaddr, i)
-
 
 		bisectoidstore.BisectOIDStore.__init__(self, OIDs=oids)
 		self.session.nav.event.append(self.gotServiceEvent)
@@ -690,8 +692,8 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			if feinfo:
 				retval = feinfo.getFrontendInfo(iFrontendInformation.signalQualitydB)
 				if retval == 0x12345678:	#cable tuner? does not have SNR
-					return v1.OctetString ( 0.0 )
-				return v1.OctetString (str (int(retval) / 100.0))
+					return v1.OctetString(0.0)
+				return v1.OctetString(str(int(retval) / 100.0))
 		return 0
 
 	def getTunerType(self):
@@ -700,8 +702,8 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 			frontendData = feinfo and feinfo.getAll(True)
 			if frontendData is not None:
 				ttype = frontendData.get("tuner_type", "UNKNOWN")
-				return v1.OctetString ( ttype )
-		return v1.OctetString ( "UNKNOWN" )
+				return v1.OctetString(ttype)
+		return v1.OctetString("UNKNOWN")
 
 	def getLock(self):
 		if self.session and self.session.nav and self.session.nav.getCurrentService():
@@ -740,6 +742,7 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 		params = str(orbital_pos) + "," + str(tsid) + "," + str(onid) + "," + str(sid) + "," + str(servicetype)
 		return params
 
+
 class Tuner:
 	def __init__(self, frontend):
 		self.frontend = frontend
@@ -764,6 +767,7 @@ class Tuner:
 	def retune(self):
 		if self.frontend:
 			self.frontend.tune(self.lastparm)
+
 
 class ourTunerOIDStore(ourOIDStore):
 	TRANSPONDERPARAMS_OID = '.1.3.6.1.2.1.1.10040.0'
@@ -891,6 +895,7 @@ class ourTunerOIDStore(ourOIDStore):
 					value += str(frontendData["orbital_position"])
 		return v1.OctetString(value)
 
+
 class SnmpAgent:
     oldmanagerip = ""
     oldber = 0
@@ -972,6 +977,8 @@ class SnmpAgent:
 # stopSNMPserver
 # Actions to take place to stop the SNMPserver
 #===============================================================================
+
+
 def stopSNMPserver(session):
     global global_my_agent
     if global_my_agent != None:
@@ -1001,6 +1008,8 @@ def sessionstart(reason, session):
 # autostart
 # Actions to take place in autostart (startup the SNMPAgent)
 #===============================================================================
+
+
 def autostartEntry(reason, **kwargs):
 	global global_my_agent
 
@@ -1013,6 +1022,8 @@ def autostartEntry(reason, **kwargs):
 # main
 # Actions to take place when starting the plugin over extensions
 #===============================================================================
+
+
 def main(session, **kwargs):
 	session.open(SNMPAgent_MainMenu)
 
@@ -1020,6 +1031,8 @@ def main(session, **kwargs):
 # plugins
 # Actions to take place in Plugins
 #===============================================================================
+
+
 def Plugins(**kwargs):
 	return [PluginDescriptor(where=[PluginDescriptor.WHERE_SESSIONSTART], fnc=sessionstart),
 			PluginDescriptor(where=[PluginDescriptor.WHERE_NETWORKCONFIG_READ], fnc=autostartEntry),
