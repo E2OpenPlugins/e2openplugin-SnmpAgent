@@ -676,7 +676,8 @@ class ourOIDStore(bisectoidstore.BisectOIDStore):
 	def getAGC(self):
 		if self.session and self.session.nav and self.session.nav.getCurrentService():
 			feinfo = self.session.nav.getCurrentService().frontendInfo()
-			return feinfo.getFrontendInfo(iFrontendInformation.signalPower) * 100 / 65536
+			if feinfo:
+				return feinfo.getFrontendInfo(iFrontendInformation.signalPower) * 100 / 65536
 		return 0
 
 	def getSNR(self):
@@ -1003,6 +1004,7 @@ def startSNMPserver(session):
 def sessionstart(reason, session):
 	global global_session
 	global_session = session
+	autostartEntry(True)
 
 #===============================================================================
 # autostart

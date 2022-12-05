@@ -87,8 +87,11 @@ class Bitrate():
 			if len(line):
 				self.datalines.append(line)
 		if len(self.datalines) >= 2:
-			self.vmin, self.vmax, self.vavg, self.vcur = self.datalines[0].split(' ')
-			self.amin, self.amax, self.aavg, self.acur = self.datalines[1].split(' ')
+			try:
+				self.vmin, self.vmax, self.vavg, self.vcur = self.datalines[0].split(' ')
+				self.amin, self.amax, self.aavg, self.acur = self.datalines[1].split(' ')
+			except:
+			    self.clearValues()
 			self.datalines = []
 			if self.refresh_func:
 				self.refresh_func()
